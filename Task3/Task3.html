@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Чат с ЭхоСервером</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #chatCanvas {
+            border: 1px solid lightblue;
+            margin-top: 10px;
+        }
+        .input-area {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        #userMessage {
+            width: calc(100% - 220px);
+            margin-right: 10px;
+        }
+        button {
+            width: 100px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="input-area">
+    <input type="text" id="userMessage" placeholder="Введите сообщение">
+    <button onclick="sendMessage()">Отправить</button>
+    <button onclick="sendGeoLocation()">Геолокация</button>
+</div>
+<canvas id="chatCanvas" width="600" height="400"></canvas>
+
+<script>
+    const canvas = document.getElementById('chatCanvas');
+    const ctx = canvas.getContext('2d');
+    const ws = new WebSocket('wss://echo-ws-service.herokuapp.com');
+    let nextMessageY = 20; // Начальное положение первого сообщения
+
+    ws.onmessage = function(event) {
+        drawMessage(event.data, 'server');
+    };
+
+    function sendMessage() {
+        const userMessageInput = document.getElementById('userMessage');
+        const message = userMessageInput.value;
+        drawMessage(message, 'user');
+        ws.send(message);
+        userMessageInput.value = '';
+    }
+
+    function drawMessage(message, type) {
+        ctx.font = '16px Arial';
+        let xPosition;
+
+        if (type === 'user') {
+            ctx.fillStyle = 'lightblue';
+            xPosition = canvas.width - 10; // Сообщения пользователя справа
+            ctx.textAlign = 'right';
+        } else {
+            ctx.fillStyle = 'blue';
+            xPosition = 10; // Сообщения сервера слева
+            ctx.textAlign = 'left';
+        }
+
+        ctx.fillText(message, xPosition, nextMessageY);
+        nextMessageY += 20; // Сдвигаем положение следующего сообщения вниз
+    }
+
+    function sendGeoLocation() {
+        if (!navigator.geolocation) {
+            drawMessage('Геолокация не поддерживается вашим браузером', 'server');
+        } else {
+            navigator.geolocation.getCurrentPosition(position => {
+                const { latitude, longitude } = position.coords;
+                const message = 'Геолокация: ' + latitude + ', ' + longitude;
+                drawMessage(message, 'user');
+            }, () => {
+                drawMessage('Не удалось получить ваше местоположение', 'server');
+            });
+        }
+    }
+</script>
+
+</body>
+</html>
